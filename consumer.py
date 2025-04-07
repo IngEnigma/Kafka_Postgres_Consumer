@@ -1,8 +1,7 @@
-from flask import Flask, request, jsonify
 import psycopg2
 import os
-
-app = Flask(__name__)
+import json
+import requests
 
 # Configuración de la conexión a la base de datos obtenida de variables de entorno
 DB_PARAMS = {
@@ -13,17 +12,18 @@ DB_PARAMS = {
     'port': os.getenv('PGPORT', '5432')
 }
 
+JSONL_URL = "https://raw.githubusercontent.com/IngEnigma/StreamlitSpark/refs/heads/master/results/male_crimes/data.jsonl"
+
 def get_db_connection():
     """Establece una conexión con la base de datos."""
     return psycopg2.connect(**DB_PARAMS)
 
-@app.route('/insert-crime', methods=['POST'])
-def insert_crime():
-    data = request.get_json()
-
+def insert_crime(data):
+    """Inserta un registro en la tabla crimes."""
     required_fields = ['dr_no', 'report_date', 'victim_age', 'victim_sex', 'crm_cd_desc']
     if not all(field in data for field in required_fields):
-        return jsonify({'error': 'Faltan campos requeridos en la solicitud'}), 400
+        print(f"Faltan campos requeridos en el registro: {data}")
+        return
 
     try:
         conn = get_db_connection()
@@ -42,9 +42,19 @@ def insert_crime():
         conn.commit()
         cur.close()
         conn.close()
-        return jsonify({'message': 'Registro insertado exitosamente'}), 201
+        print(f"Registro insertado exitosamente: {data}")
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error al insertar el registro: {e}")
+
+def main():
+    try:
+        response = requests.get(JSONL_URL)
+        response.raise_for_status()
+        for line in response.text.strip().splitlines():
+            crime_data = json.loads(line)
+            insert_crime(crime_data)
+    except Exception as e:
+        print(f"Error al obtener o procesar los datos: {e}")
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    main()
