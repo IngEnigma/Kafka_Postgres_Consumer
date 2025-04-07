@@ -1,19 +1,17 @@
-# Imagen base de Python
+# Imagen base ligera con Python
 FROM python:3.12-slim
 
 # Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Instala las dependencias necesarias
-RUN apt-get update && \
-    apt-get install -y libpq-dev gcc && \
-    pip install --no-cache-dir flask psycopg2
+# Copia los archivos necesarios al contenedor
+COPY consumer.py .
 
-# Copia el código de la aplicación al contenedor
-COPY app.py .
+# Instala librerías necesarias
+RUN pip install --no-cache-dir flask psycopg2
 
-# Expone el puerto en el que correrá la aplicación Flask
+# Expone el puerto para Flask
 EXPOSE 5000
 
-# Comando para ejecutar la aplicación
+# Comando para correr la app
 CMD ["python", "consumer.py"]
