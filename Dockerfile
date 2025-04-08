@@ -8,10 +8,12 @@ WORKDIR /app
 COPY consumer.py .
 
 # Instala librerías necesarias
-RUN pip install --no-cache-dir flask psycopg2
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    pip install --no-cache-dir psycopg2-binary confluent-kafka && \
+    apt-get remove -y gcc python3-dev && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
 
-# Expone el puerto para Flask
-EXPOSE 5000
-
-# Comando para correr la app
+# Comando para correr el consumer
 CMD ["python", "consumer.py"]
