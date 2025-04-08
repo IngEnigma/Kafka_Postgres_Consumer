@@ -15,7 +15,8 @@ KAFKA_CONFIG = {
     'sasl.username': 'IngEnigma',
     'sasl.password': 'BrARBOxX98VI4f2LIuIT1911NYGrXu',
     'group.id': 'crimes-consumer-group',
-    'auto.offset.reset': 'earliest'
+    'auto.offset.reset': 'earliest',
+    'enable.auto.commit': 'false'
 }
 
 # Configuración de PostgreSQL
