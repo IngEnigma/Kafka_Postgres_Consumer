@@ -25,5 +25,9 @@ COPY consumer.py .
 # Exponer puerto para posibles endpoints de monitoreo
 EXPOSE 8080
 
+# Health check (opcional pero recomendado)
+HEALTHCHECK --interval=30s --timeout=3s \
+    CMD curl -f http://localhost:8080/health || exit 1
+
 # Comando para ejecutar el consumer
 CMD ["python", "consumer.py"]
