@@ -1,9 +1,20 @@
 import psycopg2
 import os
 import json
-import requests
+from confluent_kafka import Consumer, KafkaException
 
-# Configuración de la conexión a la base de datos obtenida de variables de entorno
+# Configuración de Redpanda
+KAFKA_CONFIG = {
+    'bootstrap.servers': 'cvq4abs3mareak309q80.any.us-west-2.mpx.prd.cloud.redpanda.com:9092',
+    'security.protocol': 'SASL_SSL',
+    'sasl.mechanism': 'SCRAM-SHA-256',
+    'sasl.username': 'IngEnigma',
+    'sasl.password': 'BrARBOxX98VI4f2LIuIT1911NYGrXu',
+    'group.id': 'crimes-consumer-group',
+    'auto.offset.reset': 'earliest'
+}
+
+# Configuración de PostgreSQL
 DB_PARAMS = {
     'dbname': os.getenv('PGDATABASE', 'crimes'),
     'user': os.getenv('PGUSER', 'crimes_owner'),
@@ -12,7 +23,7 @@ DB_PARAMS = {
     'port': os.getenv('PGPORT', '5432')
 }
 
-JSONL_URL = "https://raw.githubusercontent.com/IngEnigma/StreamlitSpark/refs/heads/master/results/male_crimes/data.jsonl"
+TOPIC = "crimes"
 
 def get_db_connection():
     """Establece una conexión con la base de datos."""
@@ -42,19 +53,40 @@ def insert_crime(data):
         conn.commit()
         cur.close()
         conn.close()
-        print(f"Registro insertado exitosamente: {data}")
+        print(f"Registro insertado exitosamente: DR No {data['dr_no']}")
     except Exception as e:
         print(f"Error al insertar el registro: {e}")
 
 def main():
+    # Crear consumer
+    consumer = Consumer(KAFKA_CONFIG)
+    consumer.subscribe([TOPIC])
+
     try:
-        response = requests.get(JSONL_URL)
-        response.raise_for_status()
-        for line in response.text.strip().splitlines():
-            crime_data = json.loads(line)
-            insert_crime(crime_data)
-    except Exception as e:
-        print(f"Error al obtener o procesar los datos: {e}")
+        while True:
+            msg = consumer.poll(1.0)
+            
+            if msg is None:
+                continue
+            if msg.error():
+                if msg.error().code() == KafkaException._PARTITION_EOF:
+                    continue
+                else:
+                    print(f"Error al consumir: {msg.error()}")
+                    break
+            
+            try:
+                crime_data = json.loads(msg.value().decode('utf-8'))
+                insert_crime(crime_data)
+            except json.JSONDecodeError as e:
+                print(f"Error decodificando mensaje JSON: {e}")
+            except Exception as e:
+                print(f"Error procesando mensaje: {e}")
+
+    except KeyboardInterrupt:
+        print("Deteniendo consumer...")
+    finally:
+        consumer.close()
 
 if __name__ == '__main__':
     main()
