@@ -1,7 +1,11 @@
 import psycopg2
 import os
 import json
+import threading
 from confluent_kafka import Consumer, KafkaException
+from flask import Flask
+
+app = Flask(__name__)
 
 # Configuración de Redpanda
 KAFKA_CONFIG = {
@@ -26,11 +30,9 @@ DB_PARAMS = {
 TOPIC = "crimes"
 
 def get_db_connection():
-    """Establece una conexión con la base de datos."""
     return psycopg2.connect(**DB_PARAMS)
 
 def insert_crime(data):
-    """Inserta un registro en la tabla crimes."""
     required_fields = ['dr_no', 'report_date', 'victim_age', 'victim_sex', 'crm_cd_desc']
     if not all(field in data for field in required_fields):
         print(f"Faltan campos requeridos en el registro: {data}")
@@ -57,15 +59,13 @@ def insert_crime(data):
     except Exception as e:
         print(f"Error al insertar el registro: {e}")
 
-def main():
-    # Crear consumer
+def kafka_consumer_loop():
     consumer = Consumer(KAFKA_CONFIG)
     consumer.subscribe([TOPIC])
 
     try:
         while True:
             msg = consumer.poll(1.0)
-            
             if msg is None:
                 continue
             if msg.error():
@@ -74,7 +74,7 @@ def main():
                 else:
                     print(f"Error al consumir: {msg.error()}")
                     break
-            
+
             try:
                 crime_data = json.loads(msg.value().decode('utf-8'))
                 insert_crime(crime_data)
@@ -88,5 +88,15 @@ def main():
     finally:
         consumer.close()
 
+# Endpoint simple para monitoreo
+@app.route("/health")
+def health():
+    return "ok", 200
+
 if __name__ == '__main__':
-    main()
+    # Ejecutar el consumer en segundo plano
+    consumer_thread = threading.Thread(target=kafka_consumer_loop, daemon=True)
+    consumer_thread.start()
+
+    # Lanzar Flask
+    app.run(host="0.0.0.0", port=8080)
