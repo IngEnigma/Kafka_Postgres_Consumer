@@ -62,29 +62,37 @@ def insert_crime(data):
 def kafka_consumer_loop():
     consumer = Consumer(KAFKA_CONFIG)
     consumer.subscribe([TOPIC])
+    print("Consumer iniciado y suscrito al tópico", TOPIC)
 
     try:
         while True:
             msg = consumer.poll(1.0)
             if msg is None:
+                print("No hay nuevos mensajes...")
                 continue
             if msg.error():
                 if msg.error().code() == KafkaException._PARTITION_EOF:
+                    print("Fin de partición alcanzado")
                     continue
                 else:
                     print(f"Error al consumir: {msg.error()}")
                     break
 
             try:
+                print(f"Mensaje recibido: {msg.value().decode('utf-8')}")
                 crime_data = json.loads(msg.value().decode('utf-8'))
+                print("Datos parseados:", crime_data)
                 insert_crime(crime_data)
             except json.JSONDecodeError as e:
                 print(f"Error decodificando mensaje JSON: {e}")
+                print("Mensaje problemático:", msg.value())
             except Exception as e:
                 print(f"Error procesando mensaje: {e}")
 
     except KeyboardInterrupt:
         print("Deteniendo consumer...")
+    except Exception as e:
+        print(f"Error inesperado en el consumer: {e}")
     finally:
         consumer.close()
 
