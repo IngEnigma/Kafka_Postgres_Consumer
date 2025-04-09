@@ -19,7 +19,7 @@ KAFKA_CONFIG = {
 }
 
 DB_PARAMS = {
-    'dbname': 'crimes',
+    'dbname': 'crimes_pg',
     'user': 'crimes_owner',
     'password': 'npg_QUkH7TfKZlF8',
     'host': 'ep-curly-recipe-a50hnh5z-pooler.us-east-2.aws.neon.tech',
