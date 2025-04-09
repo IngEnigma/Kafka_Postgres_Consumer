@@ -1,9 +1,9 @@
-import os
-import json
-import threading
-import psycopg2
 from confluent_kafka import Consumer, KafkaException
 from flask import Flask
+import threading
+import psycopg2
+import json
+import os
 
 app = Flask(__name__)
 
