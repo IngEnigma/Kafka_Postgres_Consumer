@@ -1,4 +1,4 @@
-from confluent_kafka import Consumer, KafkaException
+from confluent_kafka import Consumer, KafkaException, KafkaError
 from flask import Flask
 import threading
 import psycopg2
@@ -68,7 +68,7 @@ def kafka_consumer_loop():
                 continue
 
             if msg.error():
-                if msg.error().code() == KafkaException._PARTITION_EOF:
+                if msg.error().code() == KafkaError._PARTITION_EOF:
                     continue
                 print(f"Error en mensaje: {msg.error()}")
                 break
