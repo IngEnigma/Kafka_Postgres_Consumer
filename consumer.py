@@ -42,14 +42,15 @@ def insert_crime(data: dict):
     
     if not all(field in data for field in required_fields):
         logging.warning(f"Campos faltantes en el registro: {data}")
-        return
+        return False
 
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 query = """
                     INSERT INTO crimes (dr_no, report_date, victim_age, victim_sex, crm_cd_desc)
-                    VALUES (%s, %s, %s, %s, %s);
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON CONFLICT (dr_no) DO NOTHING;
                 """
                 cur.execute(query, (
                     data['dr_no'],
@@ -59,8 +60,13 @@ def insert_crime(data: dict):
                     data['crm_cd_desc']
                 ))
         logging.info(f"Registro insertado: DR No {data['dr_no']}")
+        return True
+    except psycopg2.errors.UniqueViolation:
+        logging.warning(f"DR No duplicado, ya existe: {data['dr_no']}")
+        return 
     except Exception as e:
         logging.error(f"Error al insertar el registro: {e}", exc_info=True)
+        return False
 
 def kafka_consumer_loop():
     consumer = Consumer(KAFKA_CONFIG)
