@@ -82,8 +82,10 @@ def kafka_consumer_loop():
             try:
                 data = json.loads(msg.value().decode('utf-8'))
                 logging.info(f"Raw Kafka mensaje: {msg.value()}")
-                insert_crime(data)
-                consumer.commit(msg)
+                was_inserted = insert_crime(data)
+                if was_inserted:
+                    consumer.commit(asynchronous=False)
+                    
             except json.JSONDecodeError as e:
                 logging.warning(f"Error en JSON: {e} | Mensaje: {msg.value()}")
             except Exception as e:
