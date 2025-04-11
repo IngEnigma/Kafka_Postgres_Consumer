@@ -2,8 +2,14 @@ from confluent_kafka import Consumer, KafkaException, KafkaError
 from flask import Flask
 import threading
 import psycopg2
+import logging
 import json
 import os
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 app = Flask(__name__)
 
@@ -26,7 +32,7 @@ DB_PARAMS = {
     'port': '5432'
 }
 
-TOPIC = "crimes"
+TOPIC = "crimes_pg"
 
 def get_db_connection():
     return psycopg2.connect(**DB_PARAMS)
@@ -35,7 +41,7 @@ def insert_crime(data: dict):
     required_fields = ['dr_no', 'report_date', 'victim_age', 'victim_sex', 'crm_cd_desc']
     
     if not all(field in data for field in required_fields):
-        print(f"Campos faltantes en el registro: {data}")
+        logging.warning(f"Campos faltantes en el registro: {data}")
         return
 
     try:
@@ -52,14 +58,14 @@ def insert_crime(data: dict):
                     data['victim_sex'],
                     data['crm_cd_desc']
                 ))
-        print(f"Registro insertado: DR No {data['dr_no']}")
+        logging.info(f"Registro insertado: DR No {data['dr_no']}")
     except Exception as e:
-        print(f"Error al insertar el registro: {e}")
+        logging.error(f"Error al insertar el registro: {e}", exc_info=True)
 
 def kafka_consumer_loop():
     consumer = Consumer(KAFKA_CONFIG)
     consumer.subscribe([TOPIC])
-    print(f"Consumer suscrito al tópico: {TOPIC}")
+    logging.info(f"Consumer suscrito al tópico: {TOPIC}")
 
     try:
         while True:
@@ -70,20 +76,21 @@ def kafka_consumer_loop():
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
                     continue
-                print(f"Error en mensaje: {msg.error()}")
+                logging.error(f"Error en mensaje: {msg.error()}")
                 break
 
             try:
                 data = json.loads(msg.value().decode('utf-8'))
                 insert_crime(data)
             except json.JSONDecodeError as e:
-                print(f"Error en JSON: {e} | Mensaje: {msg.value()}")
+                logging.warning(f"Error en JSON: {e} | Mensaje: {msg.value()}")
             except Exception as e:
-                print(f"Error general al procesar mensaje: {e}")
+                logging.error(f"Error general al procesar mensaje: {e}", exc_info=True)
     except KeyboardInterrupt:
-        print("Consumer detenido por el usuario.")
+        logging.info("Consumer detenido por el usuario.")
     finally:
         consumer.close()
+        logging.info("Consumer cerrado.")
 
 @app.route("/health")
 def health_check():
