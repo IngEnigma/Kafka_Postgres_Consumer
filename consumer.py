@@ -27,8 +27,8 @@ KAFKA_CONFIG = {
 DB_PARAMS = {
     'dbname': 'crimes',
     'user': 'crimes_owner',
-    'password': 'npg_QUkH7TfKZlF8',
-    'host': 'ep-curly-recipe-a50hnh5z-pooler.us-east-2.aws.neon.tech',
+    'password': 'npg_P75lmOFNZeEf',
+    'host': 'ep-orange-snow-a4szl1we-pooler.us-east-1.aws.neon.tech',
     'port': '5432'
 }
 
